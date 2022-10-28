@@ -10,10 +10,12 @@ import (
 	"git.dolansoft.org/lorenz/go-zfs/ioctl"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"github.com/prometheus/common/version"
 )
 
 var (
 	listenAddr = flag.String("listen-addr", ":9700", "Address the ZFS exporter should listen on")
+	versionOpt = flag.Bool("version", false, "Show version and exit")
 )
 
 type stat struct {
@@ -221,12 +223,19 @@ func (c *zfsCollector) Collect(ch chan<- prometheus.Metric) {
 }
 
 func main() {
+	flag.Parse()
+
+	if (*versionOpt) {
+	    fmt.Println(version.Print("zfs_exporter"))
+	    return
+	}
+
 	ioctl.Init("")
 
 	c := zfsCollector{}
 	prometheus.MustRegister(&c)
+	prometheus.MustRegister(version.NewCollector("zfs_exporter"))
 
-	flag.Parse()
 	http.Handle("/metrics", promhttp.Handler())
 	if err := http.ListenAndServe(*listenAddr, nil); err != nil {
 		log.Fatalf("failed to listen: %v", err)
